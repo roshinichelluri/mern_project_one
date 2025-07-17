@@ -5,6 +5,8 @@ const mongoose = require('mongoose');
 const path = require("path");
 const methodOverride = require("method-override");
 const engine = require('ejs-mate');
+const session = require('express-session');
+const flash = require('connect-flash');
 
 
 const reviews = require('./routes/review.js');
@@ -27,10 +29,6 @@ async function main() {
     await mongoose.connect('mongodb://127.0.0.1:27017/wanderlust');
 }
 
-app.use("/listings", listings);
-app.use("/listings/:id/reviews", reviews);
-
-
 //Root 
 app.get("/",(req,res)=>{
     res.send("HI! I AM ROOT");
@@ -42,10 +40,33 @@ app.get("/privacy",(req,res)=>{
 
 app.get("/terms",(req,res)=>{
     res.send("Terms and conditions");
-})
+});
+
+const sessionOptions = {
+    secret : 'mysupersecretcode',
+    resave: false,
+    saveUninitialized: true,
+    cookie:{
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        httpOnly: true,
+    }
+};
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use((req, res, next)=>{
+    res.locals.success = req.flash('success');
+    next();
+});
+
+app.use("/listings", listings);
+app.use("/listings/:id/reviews", reviews);
+
 
 //For all un-existent routes
-//use "/{*any}" instead of "*" - god you sat down on this error for like 2 hours 
+//use "/{*any}" instead of "*"  
 app.all("/{*any}", (req, res, next) => {
     next(new ExpressError(404, "Page Not Found"));
 });
